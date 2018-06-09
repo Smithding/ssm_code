@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itheima.ssm.mapper.SUserDao">
+    <!-- User的resultMap,column是给数据库列起的别名,它对应property类的属性-->
+    <resultMap id="result_User_Map" type="com.itheima.ssm.entity.User">
+        <id column="uid" property="uid" />
+        <result column="password" property="password" />
+        <result column="phoneCheckCode" property="phoneCheckCode" />
+        <result column="nickname" property="nickname" />
+        <result column="username" property="username" />
+        <result column="checkCode" property="checkCode" />
+    </resultMap>
+
+	   <!-- Assist用于辅助工具类setRequires设置的条件,${req.require}表示列名,#{req.value}表示值它是防SQL注入的 -->
+    <sql id="Assist">
+        <where>
+            <foreach collection="require" item="req" separator=" ">
+                ${req.require} 
+                <if test="req.value != null"> #{req.value}</if> 
+                <if test="req.values != null">
+                    <foreach collection="req.values" item="val" separator=","> 
+                        #{val} 
+                    </foreach> 
+                </if> 
+                <if test="req.suffix != null"> ${req.suffix}</if> 
+            </foreach>
+        </where>
+    </sql>
+
+	   <!-- updateAssist用于更新数据的使用它拓展自Assist,用于辅助工具类setRequires设置的条件,${req.require}表示列名,#{req.value}表示值它是防SQL注入的 -->
+    <sql id="updateAssist">
+        <where>
+            <foreach collection="assist.require" item="req" separator=" ">
+                ${req.require} 
+                <if test="req.value != null"> #{req.value}</if> 
+                <if test="req.values != null">
+                    <foreach collection="req.values" item="val" separator=","> 
+                        #{val} 
+                    </foreach> 
+                </if> 
+                <if test="req.suffix != null"> ${req.suffix}</if> 
+            </foreach>
+        </where>
+    </sql>
+
+    <!-- 数据库中表名为:s_user的列名,as前是数据库的列明,as后是列的别名用于映射成实体类中的属性,需要注意的是别名必须与resultMap中的column别名一致 -->
+    <sql id="s_user_Column">
+        s_user.uid as uid
+        ,s_user.password as password
+        ,s_user.phoneCheckCode as phoneCheckCode
+        ,s_user.nickname as nickname
+        ,s_user.username as username
+        ,s_user.checkCode as checkCode
+    </sql>
+
+    <!--获得类名为:User对应的数据库表的数据总行数 -->
+    <select id="getUserRowCount" parameterType="com.itheima.ssm.common.Assist" resultType="java.lang.Long">
+        select count(uid) from s_user
+        <if test="require!=null"><include refid="Assist" /></if>
+    </select>
+    <!-- 获得类名为:User对应数据库中表的数据集合 -->
+    <select id="selectUser" parameterType="com.itheima.ssm.common.Assist"  resultMap="result_User_Map">
+        select  <if test="distinct !=null">${distinct}</if>
+        <choose>
+            <when test="resultColumn!=null">${resultColumn}</when>
+            <otherwise>
+        <include refid="s_user_Column" /> 
+            </otherwise>
+        </choose>
+        from s_user
+        <choose>
+            <when test="rowSize ==null">
+                <if test="require!=null">
+                    <include refid="Assist" />
+                </if>
+                <if test="order !=null">${order}</if>
+            </when>
+            <otherwise>
+                inner join
+                (
+                SELECT uid as primary_key FROM s_user
+                <if test="require!=null">
+                    <include refid="Assist" />
+                </if>
+                <if test="order !=null">${order}</if>
+                <choose>
+                    <when test="startRow !=null and rowSize !=null">LIMIT #{startRow},#{rowSize} </when>
+                    <when test="rowSize !=null">LIMIT #{rowSize}</when>
+                 </choose>
+                 ) as tmp
+                 on tmp.primary_key=s_user.uid
+            </otherwise>
+        </choose>
+    </select> 
+
+    <!-- 获得一个User对象,以参数User对象中不为空的属性作为条件进行查询-->
+    <select id="selectUserByObj" parameterType="com.itheima.ssm.entity.User" resultMap="result_User_Map">
+        select 
+            <include refid="s_user_Column" /> 
+        from s_user
+        <where>
+            <if test="checkCode != null "> and s_user.checkCode = #{checkCode}</if>
+            <if test="username != null "> and s_user.username = #{username}</if>
+            <if test="nickname != null "> and s_user.nickname = #{nickname}</if>
+            <if test="phoneCheckCode != null "> and s_user.phoneCheckCode = #{phoneCheckCode}</if>
+            <if test="password != null "> and s_user.password = #{password}</if>
+            <if test="uid != null "> and s_user.uid = #{uid}</if>
+        </where>
+    </select> 
+
+    <!-- 通过User的id获得对应数据库中表的数据对象-->
+    <select id="selectUserById" parameterType="java.lang.Integer" resultMap="result_User_Map">
+        select 
+            <include refid="s_user_Column" /> 
+        from s_user
+        where s_user.uid = #{id}
+    </select> 
+
+    <!-- 将User插入到对应数据库的表中,包括属性值为null的数据-->
+
+    <insert id="insertUser" parameterType="com.itheima.ssm.entity.User">
+        insert into s_user(uid,password,phoneCheckCode,nickname,username,checkCode) 
+        values(#{uid},#{password},#{phoneCheckCode},#{nickname},#{username},#{checkCode})
+    </insert>
+
+    <!-- 将User中属性值不为null的数据,插入到对应数据库的表中-->
+    <insert id="insertNonEmptyUser" parameterType="com.itheima.ssm.entity.User">
+        insert into s_user
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="uid != null">uid,</if>
+            <if test="password != null">password,</if>
+            <if test="phoneCheckCode != null">phoneCheckCode,</if>
+            <if test="nickname != null">nickname,</if>
+            <if test="username != null">username,</if>
+            <if test="checkCode != null">checkCode,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="uid != null"> #{uid},</if>
+            <if test="password != null"> #{password},</if>
+            <if test="phoneCheckCode != null"> #{phoneCheckCode},</if>
+            <if test="nickname != null"> #{nickname},</if>
+            <if test="username != null"> #{username},</if>
+            <if test="checkCode != null"> #{checkCode},</if>
+        </trim>
+    </insert>
+
+    <!-- 将User批量插入到对应数据库的表中-->
+    <insert id="insertUserByBatch" parameterType="ArrayList">
+        insert into s_user(uid,password,phoneCheckCode,nickname,username,checkCode) values
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.uid},#{item.password},#{item.phoneCheckCode},#{item.nickname},#{item.username},#{item.checkCode})
+        </foreach>
+    </insert>
+
+    <!-- 通过User的id将数据库表中对应的数据删除-->
+    <delete id="deleteUserById" parameterType="java.lang.Integer">
+        delete from s_user
+        where uid = #{id}
+    </delete>
+
+    <!-- 通过辅助工具Assist中的条件将User对应的数据库表的数据删除-->
+    <delete id="deleteUser" parameterType="com.itheima.ssm.common.Assist">
+        delete from s_user
+        <if test="require!=null"><include refid="Assist" /></if>
+    </delete>
+
+    <!-- 通过User的id将User的数据更新到数据库中对应的表,包括值null的数据-->
+    <update id="updateUserById" parameterType="com.itheima.ssm.entity.User">
+        update s_user set
+            password=#{password}
+            ,phoneCheckCode=#{phoneCheckCode}
+            ,nickname=#{nickname}
+            ,username=#{username}
+            ,checkCode=#{checkCode}
+        where uid=#{uid}
+    </update>
+
+    <!-- 通过User的id将User中属性值不为null的数据更新到数据库对应的表中-->
+    <update id="updateNonEmptyUserById" parameterType="com.itheima.ssm.entity.User">
+        update s_user
+        <set>
+            <if test="password != null">
+                password=#{password},
+            </if>
+            <if test="phoneCheckCode != null">
+                phoneCheckCode=#{phoneCheckCode},
+            </if>
+            <if test="nickname != null">
+                nickname=#{nickname},
+            </if>
+            <if test="username != null">
+                username=#{username},
+            </if>
+            <if test="checkCode != null">
+                checkCode=#{checkCode},
+            </if>
+        </set>
+        where uid=#{uid}
+    </update>
+
+    <!-- 通过辅助工具Assist中的条件将User中的数据更新到数据库对应的表中,包括值为null的数据-->
+    <update id="updateUser" parameterType="map">
+        update s_user
+        <set>
+                uid=#{enti.uid},
+                password=#{enti.password},
+                phoneCheckCode=#{enti.phoneCheckCode},
+                nickname=#{enti.nickname},
+                username=#{enti.username},
+                checkCode=#{enti.checkCode},
+        </set>
+        <if test="assist.require!=null"><include refid="updateAssist" /></if>
+    </update>
+
+    <!-- 通过辅助工具Assist中的条件将User中属性值不为null的数据更新到数据库对应的表中-->
+    <update id="updateNonEmptyUser" parameterType="map">
+        update s_user
+        <set>
+            <if test="enti.uid != null">
+                uid=#{enti.uid},
+            </if>
+            <if test="enti.password != null">
+                password=#{enti.password},
+            </if>
+            <if test="enti.phoneCheckCode != null">
+                phoneCheckCode=#{enti.phoneCheckCode},
+            </if>
+            <if test="enti.nickname != null">
+                nickname=#{enti.nickname},
+            </if>
+            <if test="enti.username != null">
+                username=#{enti.username},
+            </if>
+            <if test="enti.checkCode != null">
+                checkCode=#{enti.checkCode},
+            </if>
+        </set>
+        <if test="assist.require!=null"><include refid="updateAssist" /></if>
+    </update>
+
+</mapper>

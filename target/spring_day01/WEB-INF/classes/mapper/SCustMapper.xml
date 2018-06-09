@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itheima.ssm.mapper.SCustDao">
+    <!-- Cust的resultMap,column是给数据库列起的别名,它对应property类的属性-->
+    <resultMap id="result_Cust_Map" type="com.itheima.ssm.entity.Cust">
+        <id column="cid" property="cid" />
+        <result column="cust_link_user" property="custLinkUser" />
+        <result column="cust_type" property="custType" />
+        <result column="cust_address" property="custAddress" />
+        <result column="cust_name" property="custName" />
+        <result column="cust_phone" property="custPhone" />
+    </resultMap>
+
+	   <!-- Assist用于辅助工具类setRequires设置的条件,${req.require}表示列名,#{req.value}表示值它是防SQL注入的 -->
+    <sql id="Assist">
+        <where>
+            <foreach collection="require" item="req" separator=" ">
+                ${req.require} 
+                <if test="req.value != null"> #{req.value}</if> 
+                <if test="req.values != null">
+                    <foreach collection="req.values" item="val" separator=","> 
+                        #{val} 
+                    </foreach> 
+                </if> 
+                <if test="req.suffix != null"> ${req.suffix}</if> 
+            </foreach>
+        </where>
+    </sql>
+
+	   <!-- updateAssist用于更新数据的使用它拓展自Assist,用于辅助工具类setRequires设置的条件,${req.require}表示列名,#{req.value}表示值它是防SQL注入的 -->
+    <sql id="updateAssist">
+        <where>
+            <foreach collection="assist.require" item="req" separator=" ">
+                ${req.require} 
+                <if test="req.value != null"> #{req.value}</if> 
+                <if test="req.values != null">
+                    <foreach collection="req.values" item="val" separator=","> 
+                        #{val} 
+                    </foreach> 
+                </if> 
+                <if test="req.suffix != null"> ${req.suffix}</if> 
+            </foreach>
+        </where>
+    </sql>
+
+    <!-- 数据库中表名为:s_cust的列名,as前是数据库的列明,as后是列的别名用于映射成实体类中的属性,需要注意的是别名必须与resultMap中的column别名一致 -->
+    <sql id="s_cust_Column">
+        s_cust.cid as cid
+        ,s_cust.cust_link_user as cust_link_user
+        ,s_cust.cust_type as cust_type
+        ,s_cust.cust_address as cust_address
+        ,s_cust.cust_name as cust_name
+        ,s_cust.cust_phone as cust_phone
+    </sql>
+
+    <!--获得类名为:Cust对应的数据库表的数据总行数 -->
+    <select id="getCustRowCount" parameterType="com.itheima.ssm.common.Assist" resultType="java.lang.Long">
+        select count(cid) from s_cust
+        <if test="require!=null"><include refid="Assist" /></if>
+    </select>
+    <!-- 获得类名为:Cust对应数据库中表的数据集合 -->
+    <select id="selectCust" parameterType="com.itheima.ssm.common.Assist"  resultMap="result_Cust_Map">
+        select  <if test="distinct !=null">${distinct}</if>
+        <choose>
+            <when test="resultColumn!=null">${resultColumn}</when>
+            <otherwise>
+        <include refid="s_cust_Column" /> 
+            </otherwise>
+        </choose>
+        from s_cust
+        <choose>
+            <when test="rowSize ==null">
+                <if test="require!=null">
+                    <include refid="Assist" />
+                </if>
+                <if test="order !=null">${order}</if>
+            </when>
+            <otherwise>
+                inner join
+                (
+                SELECT cid as primary_key FROM s_cust
+                <if test="require!=null">
+                    <include refid="Assist" />
+                </if>
+                <if test="order !=null">${order}</if>
+                <choose>
+                    <when test="startRow !=null and rowSize !=null">LIMIT #{startRow},#{rowSize} </when>
+                    <when test="rowSize !=null">LIMIT #{rowSize}</when>
+                 </choose>
+                 ) as tmp
+                 on tmp.primary_key=s_cust.cid
+            </otherwise>
+        </choose>
+    </select> 
+
+    <!-- 获得一个Cust对象,以参数Cust对象中不为空的属性作为条件进行查询-->
+    <select id="selectCustByObj" parameterType="com.itheima.ssm.entity.Cust" resultMap="result_Cust_Map">
+        select 
+            <include refid="s_cust_Column" /> 
+        from s_cust
+        <where>
+            <if test="custPhone != null "> and s_cust.cust_phone = #{custPhone}</if>
+            <if test="custName != null "> and s_cust.cust_name = #{custName}</if>
+            <if test="custAddress != null "> and s_cust.cust_address = #{custAddress}</if>
+            <if test="custType != null "> and s_cust.cust_type = #{custType}</if>
+            <if test="custLinkUser != null "> and s_cust.cust_link_user = #{custLinkUser}</if>
+            <if test="cid != null "> and s_cust.cid = #{cid}</if>
+        </where>
+    </select> 
+
+    <!-- 通过Cust的id获得对应数据库中表的数据对象-->
+    <select id="selectCustById" parameterType="java.lang.Integer" resultMap="result_Cust_Map">
+        select 
+            <include refid="s_cust_Column" /> 
+        from s_cust
+        where s_cust.cid = #{id}
+    </select> 
+
+    <!-- 将Cust插入到对应数据库的表中,包括属性值为null的数据-->
+
+    <insert id="insertCust" parameterType="com.itheima.ssm.entity.Cust">
+        insert into s_cust(cid,cust_link_user,cust_type,cust_address,cust_name,cust_phone) 
+        values(#{cid},#{custLinkUser},#{custType},#{custAddress},#{custName},#{custPhone})
+    </insert>
+
+    <!-- 将Cust中属性值不为null的数据,插入到对应数据库的表中-->
+    <insert id="insertNonEmptyCust" parameterType="com.itheima.ssm.entity.Cust">
+        insert into s_cust
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="cid != null">cid,</if>
+            <if test="custLinkUser != null">cust_link_user,</if>
+            <if test="custType != null">cust_type,</if>
+            <if test="custAddress != null">cust_address,</if>
+            <if test="custName != null">cust_name,</if>
+            <if test="custPhone != null">cust_phone,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="cid != null"> #{cid},</if>
+            <if test="custLinkUser != null"> #{custLinkUser},</if>
+            <if test="custType != null"> #{custType},</if>
+            <if test="custAddress != null"> #{custAddress},</if>
+            <if test="custName != null"> #{custName},</if>
+            <if test="custPhone != null"> #{custPhone},</if>
+        </trim>
+    </insert>
+
+    <!-- 将Cust批量插入到对应数据库的表中-->
+    <insert id="insertCustByBatch" parameterType="ArrayList">
+        insert into s_cust(cid,cust_link_user,cust_type,cust_address,cust_name,cust_phone) values
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.cid},#{item.custLinkUser},#{item.custType},#{item.custAddress},#{item.custName},#{item.custPhone})
+        </foreach>
+    </insert>
+
+    <!-- 通过Cust的id将数据库表中对应的数据删除-->
+    <delete id="deleteCustById" parameterType="java.lang.Integer">
+        delete from s_cust
+        where cid = #{id}
+    </delete>
+
+    <!-- 通过辅助工具Assist中的条件将Cust对应的数据库表的数据删除-->
+    <delete id="deleteCust" parameterType="com.itheima.ssm.common.Assist">
+        delete from s_cust
+        <if test="require!=null"><include refid="Assist" /></if>
+    </delete>
+
+    <!-- 通过Cust的id将Cust的数据更新到数据库中对应的表,包括值null的数据-->
+    <update id="updateCustById" parameterType="com.itheima.ssm.entity.Cust">
+        update s_cust set
+            cust_link_user=#{custLinkUser}
+            ,cust_type=#{custType}
+            ,cust_address=#{custAddress}
+            ,cust_name=#{custName}
+            ,cust_phone=#{custPhone}
+        where cid=#{cid}
+    </update>
+
+    <!-- 通过Cust的id将Cust中属性值不为null的数据更新到数据库对应的表中-->
+    <update id="updateNonEmptyCustById" parameterType="com.itheima.ssm.entity.Cust">
+        update s_cust
+        <set>
+            <if test="custLinkUser != null">
+                cust_link_user=#{custLinkUser},
+            </if>
+            <if test="custType != null">
+                cust_type=#{custType},
+            </if>
+            <if test="custAddress != null">
+                cust_address=#{custAddress},
+            </if>
+            <if test="custName != null">
+                cust_name=#{custName},
+            </if>
+            <if test="custPhone != null">
+                cust_phone=#{custPhone},
+            </if>
+        </set>
+        where cid=#{cid}
+    </update>
+
+    <!-- 通过辅助工具Assist中的条件将Cust中的数据更新到数据库对应的表中,包括值为null的数据-->
+    <update id="updateCust" parameterType="map">
+        update s_cust
+        <set>
+                cid=#{enti.cid},
+                cust_link_user=#{enti.custLinkUser},
+                cust_type=#{enti.custType},
+                cust_address=#{enti.custAddress},
+                cust_name=#{enti.custName},
+                cust_phone=#{enti.custPhone},
+        </set>
+        <if test="assist.require!=null"><include refid="updateAssist" /></if>
+    </update>
+
+    <!-- 通过辅助工具Assist中的条件将Cust中属性值不为null的数据更新到数据库对应的表中-->
+    <update id="updateNonEmptyCust" parameterType="map">
+        update s_cust
+        <set>
+            <if test="enti.cid != null">
+                cid=#{enti.cid},
+            </if>
+            <if test="enti.custLinkUser != null">
+                cust_link_user=#{enti.custLinkUser},
+            </if>
+            <if test="enti.custType != null">
+                cust_type=#{enti.custType},
+            </if>
+            <if test="enti.custAddress != null">
+                cust_address=#{enti.custAddress},
+            </if>
+            <if test="enti.custName != null">
+                cust_name=#{enti.custName},
+            </if>
+            <if test="enti.custPhone != null">
+                cust_phone=#{enti.custPhone},
+            </if>
+        </set>
+        <if test="assist.require!=null"><include refid="updateAssist" /></if>
+    </update>
+
+</mapper>
